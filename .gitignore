@@ -1,0 +1,8 @@
+.actionScriptProperties
+.flexProperties
+bin-debug/
+VideoConverter.iml
+.project
+.idea/
+.settings/org.eclipse.core.resources.prefs
+src/bin/ffmpeg.exe
