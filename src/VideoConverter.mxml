@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" 
+<s:WindowedApplication xmlns:fx="http://ns.adobe.com/mxml/2009" backgroundColor="0xc3a584"
 					   xmlns:s="library://ns.adobe.com/flex/spark" chromeColor="0x440000"
 					   creationComplete="onComplete(event)">
 	
@@ -31,10 +31,10 @@
 			protected function onComplete(event:FlexEvent):void
 			{
 				
-				//sourceDirectory.resolvePath("C:\Users\joseph.labrecque\Desktop\W");
-				//sourceDirectory.
-				//destinationDirectory.resolvePath("C:\Users\joseph.labrecque\Desktop\D");
-				
+				sourceDirectory = File.desktopDirectory;
+                sourceLabel.text = sourceDirectory.nativePath;
+				destinationDirectory = File.desktopDirectory;
+                destinationLabel.text = destinationDirectory.nativePath;
 				
 				ffmpeg = new NativeProcess();
 				ffmpegInfo = new NativeProcessStartupInfo();
@@ -56,10 +56,7 @@
 				videoArray = new ArrayCollection();
 				tempArray = sourceDirectory.getDirectoryListing();
 				for(var i:int = 0; i<tempArray.length; i++){
-					//if(tempArray[i].extension == "flv" || tempArray[i].extension == "f4v" || tempArray[i].extension == "mov" || tempArray[i].extension == "m4v") {
-					//if(tempArray[i].extension == "m4v") {
 					videoArray.addItem(tempArray[i]);
-					//}
 				}
 				fileOut = videoArray.length + "files left...";
 				runFFMPEG();
@@ -68,51 +65,24 @@
 				
 			
 			private function runFFMPEG():void {
+                log.text = "";
+                var rawArgs:String = "-y -metadata:s:v rotate='0' -movflags +faststart -loglevel warning -c:v libx264 -profile:v main -level 3.1 -preset veryfast -crf 24 -vsync 1 -r 24 -pix_fmt yuvj420p -c:a libfdk_aac -cutoff 18000 -ar 44100 -b:a 192k -vf scale='trunc(oh*a/2)*2':'min(480\,ih)' ";
 				var f:Object = videoArray.getItemAt(0);
 				var processArgs:Vector.<String> = new Vector.<String>();
 				var n:String = f.name;
 				var b:int = n.indexOf(".");
 				var d:String = destinationDirectory.nativePath + "/" + n.substr(0, b) + ".mp4";
-				
-				
-				processArgs.push("-i");
-				processArgs.push(f.nativePath);
-				
-				
-				processArgs.push("-y");
-				
-				processArgs.push("-strict");
-				processArgs.push("experimental");
-				
-				processArgs.push("-nostdin");
-				
-				
-				
-				processArgs.push("-movflags");
-				processArgs.push("+faststart"); 
-				
-				processArgs.push("-c:v");
-				processArgs.push("libx264");
-				
-				processArgs.push("-preset");
-				processArgs.push("veryfast");
-				
-				processArgs.push("-crf");
-				processArgs.push("24");
-				
-				processArgs.push("-pix_fmt");
-				processArgs.push("yuv420p");
-				
-				processArgs.push("-c:a");
-				processArgs.push("aac");
-				
-				processArgs.push("-b:a");
-				processArgs.push("128k");
-				
-				processArgs.push(d);
-				
+
+                processArgs.push("-i");
+                processArgs.push(f.nativePath);
+                var argArray:Array = rawArgs.split(" ");
+                for(var j:int = 0; j<argArray.length; j++){
+                    processArgs.push(argArray[j]);
+                }
+                processArgs.push(d);
+
 				videoArray.removeItemAt(0);
-				fileOut = videoArray.length + " files left...";
+				fileOut = videoArray.length + " files left... [" + f.name + "]";
 				ffmpegInfo.arguments = processArgs;
 				ffmpeg.start(ffmpegInfo);
 			}
@@ -121,22 +91,22 @@
 			
 			
 			public function onOutputData(e:ProgressEvent):void {
-				trace("Got: ", ffmpeg.standardOutput.readUTFBytes(ffmpeg.standardOutput.bytesAvailable)); 
+                log.appendText("Got: " + ffmpeg.standardOutput.readUTFBytes(ffmpeg.standardOutput.bytesAvailable));
 			}
 			
 			public function onErrorData(e:ProgressEvent):void {
-				trace("ERROR -", ffmpeg.standardError.readUTFBytes(ffmpeg.standardError.bytesAvailable)); 
+                log.appendText("ERROR -" + ffmpeg.standardError.readUTFBytes(ffmpeg.standardError.bytesAvailable));
 			}
 			
 			public function onExit(e:NativeProcessExitEvent):void {
-				trace("Process exited with ", e.exitCode);
+                log.appendText("Process exited with " + e.exitCode);
 				if(videoArray.length > 0){
 					runFFMPEG();
 				}
 			}
 			
 			public function onIOError(e:IOErrorEvent):void {
-				trace(ffmpeg.toString());
+                log.appendText(ffmpeg.toString());
 			}
 			
 			
@@ -160,7 +130,7 @@
 			protected function onSourceSelected(event:Event):void
 			{
 				sourceDirectory.removeEventListener(Event.SELECT, onSourceSelected);
-				sourceLabel.text = sourceDirectory.name;
+				sourceLabel.text = sourceDirectory.nativePath;
 			}
 			
 			
@@ -173,7 +143,7 @@
 			protected function onDestinationSelected(event:Event):void
 			{
 				destinationDirectory.removeEventListener(Event.SELECT, onDestinationSelected);
-				destinationLabel.text = destinationDirectory.name;
+				destinationLabel.text = destinationDirectory.nativePath;
 			}
 			
 			
@@ -187,14 +157,15 @@
 		</s:layout>
 		
 		<s:Button label="Choose Source Directory" click="onSourceButtonClick(event)" skinClass="flatspark.skins.ButtonSkin"/>
-		<s:Button label="Choose Destination Directory" click="onDestinationButtonClick(event)" skinClass="flatspark.skins.ButtonSkin"/>
-		
-		<s:Label id="sourceLabel"/>
+        <s:Label id="sourceLabel" />
+        <s:Button label="Choose Destination Directory" click="onDestinationButtonClick(event)" skinClass="flatspark.skins.ButtonSkin"/>
 		<s:Label id="destinationLabel" />
 		
 		<s:Button label="RUN" click="gatherVideos(event)" skinClass="flatspark.skins.ButtonSkin"/>
 		
 		<s:Label text="{fileOut}"/>
+        <s:TextArea contentBackgroundColor="0x191919" color="0xfaebd7" focusColor="0x8b0000" width="100%"
+                    height="100%" id="log"></s:TextArea>
 		
 	</s:Group>
 	
